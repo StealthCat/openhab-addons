@@ -11,8 +11,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - name: Checkout
+      - name: Checkout add-ons
         uses: actions/checkout@v7
+
+      - name: Checkout openHAB Core 5.3.0.M1
+        uses: actions/checkout@v7
+        with:
+          repository: openhab/openhab-core
+          ref: 5.3.0.M1
+          path: openhab-core
 
       - name: Set up Java 21
         uses: actions/setup-java@v6
@@ -20,6 +27,9 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+
+      - name: Install openHAB Core 5.3.0.M1
+        run: mvn -B -f openhab-core/pom.xml -T 1C -DskipChecks -DskipTests -Dspotless.check.skip=true clean install
 
       - name: Apply openHAB formatting
         run: mvn -B -pl :org.openhab.binding.tplinksmarthome -am spotless:apply
