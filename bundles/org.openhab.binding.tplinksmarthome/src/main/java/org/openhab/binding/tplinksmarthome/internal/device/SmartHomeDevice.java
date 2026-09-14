@@ -58,6 +58,7 @@ public abstract class SmartHomeDevice {
      * @param configuration The global configuration
      */
     public void initialize(Connection connection, TPLinkSmartHomeConfiguration configuration) {
+        connection.configure(configuration);
         this.connection = connection;
         this.configuration = configuration;
     }

@@ -215,14 +215,20 @@ public class SmartHomeHandler extends BaseThingHandler {
     /**
      * Checks if the current configured ip addres is still the same as by which the device is registered on the network.
      * If there is a different ip address for this device it will update the configuration with this ip and start using
-     * this ip address.
+     * this ip address. The MAC address is used as a fallback because modern discovery may expose a different device id
+     * than the get_sysinfo command.
      */
     private void updateIpAddress() {
-        if (configuration.deviceId == null) {
-            // The device id is needed to get the ip address so if not known no need to continue.
-            return;
+        @Nullable String lastKnownIpAddress = null;
+        if (configuration.deviceId != null) {
+            lastKnownIpAddress = ipAddressService.getLastKnownIpAddress(configuration.deviceId);
         }
-        final String lastKnownIpAddress = ipAddressService.getLastKnownIpAddress(configuration.deviceId);
+        if (lastKnownIpAddress == null) {
+            @Nullable String macAddress = getThing().getProperties().get(PROPERTY_MAC);
+            if (macAddress != null) {
+                lastKnownIpAddress = ipAddressService.getLastKnownIpAddressByMac(macAddress);
+            }
+        }
 
         if (lastKnownIpAddress != null && !lastKnownIpAddress.equals(configuration.ipAddress)) {
             final Configuration editConfig = editConfiguration();
@@ -272,9 +278,8 @@ public class SmartHomeHandler extends BaseThingHandler {
     /**
      * Updates the state from the device data for the channel given the data..
      *
-     * @param channelUID channel to update
+     * @param channelUID channel to update state for
      * @param deviceState the state object containing the value to set of the channel
-     *
      */
     private void updateChannelState(final ChannelUID channelUID, @Nullable final DeviceState deviceState) {
         if (!isLinked(channelUID)) {

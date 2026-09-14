@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -24,83 +25,183 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class acts as and interface to the physical device.
+ * Connection facade for legacy XOR and modern KLAP transports.
  *
- * @author Christian Fischer - Initial contribution
- * @author Hilbrand Bouwkamp - Reorganized code and put connection in single class
+ * The public API intentionally remains the same so the device-specific command code does not need to know which
+ * transport a firmware revision uses.
  */
 @NonNullByDefault
 public class Connection {
 
     public static final int TP_LINK_SMART_HOME_PORT = 9999;
+    private final Logger logger = LoggerFactory.getLogger(Connection.class);
     private static final int SOCKET_TIMEOUT_MILLISECONDS = 2_000;
 
-    private final Logger logger = LoggerFactory.getLogger(Connection.class);
+    private enum ActiveTransport {
+        UNKNOWN,
+        XOR,
+        KLAP
+    }
 
     private @Nullable String ipAddress;
+    private String configuredProtocol = "AUTO";
+    private String username = "";
+    private String password = "";
+    private int httpPort = 80;
+    private ActiveTransport activeTransport = ActiveTransport.UNKNOWN;
+    private @Nullable KlapTransport klapTransport;
 
-    /**
-     * Initializes a connection to the given ip address.
-     *
-     * @param ipAddress ip address of the connection
-     */
     public Connection(@Nullable final String ipAddress) {
         this.ipAddress = ipAddress;
     }
 
-    /**
-     * Set the ip address to connect to.
-     *
-     * @param ipAddress The ip address to connect to
-     */
-    public void setIpAddress(final String ipAddress) {
-        this.ipAddress = ipAddress;
+    public Connection(final TPLinkSmartHomeConfiguration configuration) {
+        ipAddress = configuration.ipAddress;
+        configure(configuration);
     }
 
-    /**
-     * Sends the command, which is a json string, encrypted to the device and decrypts the json result and returns it
-     *
-     * @param command json command to send to the device
-     * @return decrypted returned json result from the device
-     * @throws IOException exception in case device not reachable
-     */
-    public synchronized String sendCommand(final String command) throws IOException {
-        logger.trace("Executing command: {}", command);
-        try (Socket socket = createSocket(); final OutputStream outputStream = socket.getOutputStream()) {
-            outputStream.write(CryptUtil.encryptWithLength(command));
-            final String response = readReturnValue(socket);
+    /** Apply protocol/authentication settings after the device has been initialized. */
+    public synchronized void configure(final TPLinkSmartHomeConfiguration configuration) {
+        String newProtocol = normalizeProtocol(configuration.protocol);
+        String newUsername = configuration.username == null ? "" : configuration.username;
+        String newPassword = configuration.password == null ? "" : configuration.password;
+        int newHttpPort = configuration.httpPort > 0 ? configuration.httpPort : 80;
 
-            logger.trace("Command response: {}", response);
-            return response;
+        if (!newProtocol.equals(configuredProtocol) || !newUsername.equals(username) || !newPassword.equals(password)
+                || newHttpPort != httpPort) {
+            configuredProtocol = newProtocol;
+            username = newUsername;
+            password = newPassword;
+            httpPort = newHttpPort;
+            activeTransport = ActiveTransport.UNKNOWN;
+            klapTransport = null;
         }
     }
 
-    /**
-     * Reads and decrypts result returned from the device.
-     *
-     * @param socket socket to read result from
-     * @return decrypted result
-     * @throws IOException exception in case device not reachable
-     */
+    public synchronized void setIpAddress(final String ipAddress) {
+        if (this.ipAddress == null || !this.ipAddress.equals(ipAddress)) {
+            this.ipAddress = ipAddress;
+            activeTransport = ActiveTransport.UNKNOWN;
+            if (klapTransport != null) {
+                klapTransport.setHost(ipAddress);
+            }
+        }
+    }
+
+    public synchronized String sendCommand(final String command) throws IOException {
+        if (ipAddress == null || ipAddress.isBlank()) {
+            throw new IOException("Ip address not set. Wait for discovery or manually trigger discovery process.");
+        }
+
+        if ("XOR".equals(configuredProtocol)) {
+            return sendLegacyCommand(command);
+        }
+        if (configuredProtocol.startsWith("KLAP")) {
+            return sendKlapCommand(command, configuredKlapVersion());
+        }
+
+        // AUTO: prefer the last known-good transport and re-probe when it stops working.
+        if (activeTransport == ActiveTransport.XOR) {
+            try {
+                return sendLegacyCommand(command);
+            } catch (IOException e) {
+                activeTransport = ActiveTransport.UNKNOWN;
+                return tryKlapAfterLegacyFailure(command, e);
+            }
+        }
+        if (activeTransport == ActiveTransport.KLAP) {
+            try {
+                return sendKlapCommand(command, 0);
+            } catch (IOException klapFailure) {
+                activeTransport = ActiveTransport.UNKNOWN;
+                try {
+                    String response = sendLegacyCommand(command);
+                    activeTransport = ActiveTransport.XOR;
+                    return response;
+                } catch (IOException legacyFailure) {
+                    klapFailure.addSuppressed(legacyFailure);
+                    throw klapFailure;
+                }
+            }
+        }
+
+        try {
+            String response = sendLegacyCommand(command);
+            activeTransport = ActiveTransport.XOR;
+            logger.debug("TP-Link transport selected legacy XOR for {}", ipAddress);
+            return response;
+        } catch (IOException legacyFailure) {
+            return tryKlapAfterLegacyFailure(command, legacyFailure);
+        }
+    }
+
+    private String tryKlapAfterLegacyFailure(String command, IOException legacyFailure) throws IOException {
+        try {
+            String response = sendKlapCommand(command, 0);
+            activeTransport = ActiveTransport.KLAP;
+            KlapTransport transport = klapTransport;
+            logger.debug("TP-Link transport selected KLAP{} for {}",
+                    transport == null ? "" : " v" + transport.getActiveVersion(), ipAddress);
+            return response;
+        } catch (IOException klapFailure) {
+            klapFailure.addSuppressed(legacyFailure);
+            throw klapFailure;
+        }
+    }
+
+    private String sendLegacyCommand(final String command) throws IOException {
+        try (Socket socket = createSocket(); OutputStream outputStream = socket.getOutputStream()) {
+            outputStream.write(CryptUtil.encryptWithLength(command));
+            return readReturnValue(socket);
+        }
+    }
+
+    private String sendKlapCommand(final String command, int version) throws IOException {
+        String host = ipAddress;
+        if (host == null || host.isBlank()) {
+            throw new IOException("Ip address not set. Wait for discovery or manually trigger discovery process.");
+        }
+        KlapTransport transport = klapTransport;
+        if (transport == null) {
+            transport = new KlapTransport(host, httpPort, username, password, version);
+            klapTransport = transport;
+        }
+        return transport.sendCommand(command);
+    }
+
+    private int configuredKlapVersion() {
+        if ("KLAP_V1".equals(configuredProtocol)) {
+            return 1;
+        }
+        if ("KLAP_V2".equals(configuredProtocol)) {
+            return 2;
+        }
+        return 0;
+    }
+
+    private static String normalizeProtocol(@Nullable String protocol) {
+        if (protocol == null || protocol.isBlank()) {
+            return "AUTO";
+        }
+        String normalized = protocol.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        return switch (normalized) {
+            case "XOR", "KLAP", "KLAP_V1", "KLAP_V2" -> normalized;
+            default -> "AUTO";
+        };
+    }
+
     private String readReturnValue(final Socket socket) throws IOException {
         try (InputStream is = socket.getInputStream()) {
             return CryptUtil.decryptWithLength(is);
         }
     }
 
-    /**
-     * Wrapper around socket creation to make mocking possible.
-     *
-     * @return new Socket instance
-     * @throws UnknownHostException exception in case the host could not be determined
-     * @throws IOException exception in case device not reachable
-     */
+    /** Wrapper around socket creation retained to keep existing device tests mockable. */
     protected Socket createSocket() throws UnknownHostException, IOException {
         if (ipAddress == null) {
             throw new IOException("Ip address not set. Wait for discovery or manually trigger discovery process.");
         }
         final Socket socket = new Socket(ipAddress, TP_LINK_SMART_HOME_PORT);
-
         socket.setSoTimeout(SOCKET_TIMEOUT_MILLISECONDS);
         return socket;
     }
