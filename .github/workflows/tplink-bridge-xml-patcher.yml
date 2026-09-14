@@ -1,0 +1,52 @@
+name: Patch TP-Link thing bridge refs
+
+on:
+  push:
+    branches:
+      - tplink-bridge-xml-patcher
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout target feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: tplink-modern-protocols-5.3.0.M1
+          fetch-depth: 0
+
+      - name: Add account bridge support to all device Thing types
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path("bundles/org.openhab.binding.tplinksmarthome/src/main/resources/OH-INF/thing")
+          changed = []
+          block = ("\t\t<supported-bridge-type-refs>\n"
+                   "\t\t\t<bridge-type-ref id=\"account\"/>\n"
+                   "\t\t</supported-bridge-type-refs>\n\n")
+          for path in sorted(root.glob("*.xml")):
+              if path.name in {"account.xml", "channels.xml"}:
+                  continue
+              text = path.read_text()
+              if "<thing-type " not in text or "<supported-bridge-type-refs>" in text:
+                  continue
+              text, count = re.subn(r"(\t<thing-type id=\"[^\"]+\">\n)", r"\1" + block, text, count=1)
+              if count:
+                  path.write_text(text)
+                  changed.append(path.name)
+          print(f"Updated {len(changed)} Thing type files: {', '.join(changed)}")
+          if not changed:
+              raise SystemExit("No Thing type files were updated")
+
+      - name: Commit generated Thing metadata
+        run: |
+          git config user.name "Bob"
+          git config user.email "rcronin@gmail.com"
+          git add bundles/org.openhab.binding.tplinksmarthome/src/main/resources/OH-INF/thing
+          git commit -m "[tplinksmarthome] allow devices to select account bridge"
+          git push origin HEAD:tplink-modern-protocols-5.3.0.M1
