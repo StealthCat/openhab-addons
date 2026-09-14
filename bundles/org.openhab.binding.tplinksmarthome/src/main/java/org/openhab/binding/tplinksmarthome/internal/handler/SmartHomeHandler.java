@@ -25,6 +25,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.util.StringUtil;
 import org.openhab.binding.tplinksmarthome.internal.Connection;
+import org.openhab.binding.tplinksmarthome.internal.TPLinkCredentials;
 import org.openhab.binding.tplinksmarthome.internal.TPLinkIpAddressService;
 import org.openhab.binding.tplinksmarthome.internal.TPLinkSmartHomeConfiguration;
 import org.openhab.binding.tplinksmarthome.internal.TPLinkSmartHomeThingType;
@@ -37,6 +38,7 @@ import org.openhab.core.cache.ExpiringCache;
 import org.openhab.core.config.core.Configuration;
 import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.unit.Units;
+import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
@@ -111,6 +113,7 @@ public class SmartHomeHandler extends BaseThingHandler {
     @Override
     public void handleCommand(final ChannelUID channelUid, final Command command) {
         try {
+            configureConnectionCredentials();
             if (command instanceof RefreshType) {
                 updateChannelState(channelUid, fastCache.getValue());
             } else if (smartHomeDevice.handleCommand(channelUid, command)) {
@@ -144,6 +147,7 @@ public class SmartHomeHandler extends BaseThingHandler {
                 configuration.deviceId);
         connection = createConnection(configuration);
         smartHomeDevice.initialize(connection, configuration);
+        configureConnectionCredentials();
         cache = new ExpiringCache<>(Duration.ofSeconds(configuration.refresh), this::refreshCache);
         // If refresh > threshold fast cache invalidates after 1 second, else it behaves just as the 'normal' cache
         fastCache = configuration.refresh > forceRefreshThreshold
@@ -171,9 +175,24 @@ public class SmartHomeHandler extends BaseThingHandler {
     }
 
     /**
+     * Select credentials from the assigned account bridge, falling back to the legacy per-Thing settings.
+     */
+    private void configureConnectionCredentials() {
+        Bridge bridge = getBridge();
+        if (bridge != null && bridge.getHandler() instanceof TPLinkAccountBridgeHandler accountBridgeHandler) {
+            TPLinkCredentials bridgeCredentials = accountBridgeHandler.getCredentials();
+            if (bridgeCredentials.areSet()) {
+                connection.configure(configuration, bridgeCredentials.username(), bridgeCredentials.password());
+                return;
+            }
+        }
+        connection.configure(configuration);
+    }
+
+    /**
      * Invalidates the cache to force an update. It returns the refreshed cached value.
      *
-     * @return the refreshed value
+     * @return the refreshed value.
      */
     private @Nullable DeviceState forceCacheUpdate() {
         cache.invalidateValue();
@@ -185,6 +204,7 @@ public class SmartHomeHandler extends BaseThingHandler {
 
         while (true) {
             try {
+                configureConnectionCredentials();
                 updateIpAddress();
                 final DeviceState deviceState = new DeviceState(
                         connection.sendCommand(smartHomeDevice.getUpdateCommand()));
