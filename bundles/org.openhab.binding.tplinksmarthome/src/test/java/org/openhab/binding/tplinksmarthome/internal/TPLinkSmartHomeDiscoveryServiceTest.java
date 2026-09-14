@@ -24,6 +24,7 @@ import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -98,5 +99,13 @@ public class TPLinkSmartHomeDiscoveryServiceTest {
                 "Check if correct binding id found");
         assertEquals(propertiesSize, discoveryResult.getProperties().size(),
                 "Check if expected number of properties found");
+    }
+
+    @Test
+    public void testMacAddressIpLookup() throws IOException {
+        setUp("plug_get_sysinfo_response");
+        discoveryService.startScan();
+        assertEquals(InetAddress.getLocalHost().getHostAddress(),
+                discoveryService.getLastKnownIpAddressByMac("MAC-ADD-HERE"));
     }
 }

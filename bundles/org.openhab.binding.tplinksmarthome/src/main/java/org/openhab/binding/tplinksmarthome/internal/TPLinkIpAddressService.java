@@ -31,4 +31,16 @@ public interface TPLinkIpAddressService {
      */
     @Nullable
     String getLastKnownIpAddress(String deviceId);
+
+    /**
+     * Returns the last known ip address for a device MAC address. Modern TDP discovery may report a different device id
+     * than the IOT get_sysinfo command, so the MAC address provides a stable fallback for DHCP address changes.
+     *
+     * @param macAddress device MAC address
+     * @return ip address or null
+     */
+    @Nullable
+    default String getLastKnownIpAddressByMac(String macAddress) {
+        return null;
+    }
 }

@@ -38,4 +38,24 @@ public class TPLinkSmartHomeConfiguration {
      * Transition period of light bulb state changes in seconds.
      */
     public int transitionPeriod;
+
+    /**
+     * Local protocol. Supported values are AUTO, XOR, KLAP, KLAP_V1 and KLAP_V2.
+     */
+    public String protocol = "AUTO";
+
+    /**
+     * TP-Link/Kasa account e-mail used for authenticated local access.
+     */
+    public String username = "";
+
+    /**
+     * TP-Link/Kasa account password used for authenticated local access.
+     */
+    public String password = "";
+
+    /**
+     * HTTP port used by KLAP, normally 80.
+     */
+    public int httpPort = 80;
 }

@@ -27,6 +27,36 @@
 			<unitLabel>seconds</unitLabel>
 			<default>30</default>
 		</parameter>
+		<parameter name="protocol" type="text">
+			<label>Local Protocol</label>
+			<description>Transport used by the device. AUTO probes legacy XOR first and then authenticated KLAP.</description>
+			<default>AUTO</default>
+			<options>
+				<option value="AUTO">Automatic</option>
+				<option value="XOR">Legacy XOR (TCP/9999)</option>
+				<option value="KLAP">KLAP (auto version)</option>
+				<option value="KLAP_V1">KLAP v1</option>
+				<option value="KLAP_V2">KLAP v2</option>
+			</options>
+			<limitToOptions>true</limitToOptions>
+		</parameter>
+		<parameter name="username" type="text">
+			<label>TP-Link Account</label>
+			<description>TP-Link/Kasa account e-mail. Required by devices that enforce authenticated local access.</description>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="password" type="text">
+			<context>password</context>
+			<label>TP-Link Password</label>
+			<description>Password for the TP-Link/Kasa account. It is used only for local device authentication.</description>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="httpPort" type="integer" min="1" max="65535">
+			<label>KLAP HTTP Port</label>
+			<description>HTTP port used by KLAP. Modern discovery normally supplies this automatically.</description>
+			<default>80</default>
+			<advanced>true</advanced>
+		</parameter>
 	</config-description>
 
 	<config-description uri="thing-type:tplinksmarthome:device-plug">
@@ -45,6 +75,36 @@
 			<unitLabel>seconds</unitLabel>
 			<default>30</default>
 		</parameter>
+		<parameter name="protocol" type="text">
+			<label>Local Protocol</label>
+			<description>Transport used by the device. AUTO probes legacy XOR first and then authenticated KLAP.</description>
+			<default>AUTO</default>
+			<options>
+				<option value="AUTO">Automatic</option>
+				<option value="XOR">Legacy XOR (TCP/9999)</option>
+				<option value="KLAP">KLAP (auto version)</option>
+				<option value="KLAP_V1">KLAP v1</option>
+				<option value="KLAP_V2">KLAP v2</option>
+			</options>
+			<limitToOptions>true</limitToOptions>
+		</parameter>
+		<parameter name="username" type="text">
+			<label>TP-Link Account</label>
+			<description>TP-Link/Kasa account e-mail. Required by devices that enforce authenticated local access.</description>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="password" type="text">
+			<context>password</context>
+			<label>TP-Link Password</label>
+			<description>Password for the TP-Link/Kasa account. It is used only for local device authentication.</description>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="httpPort" type="integer" min="1" max="65535">
+			<label>KLAP HTTP Port</label>
+			<description>HTTP port used by KLAP. Modern discovery normally supplies this automatically.</description>
+			<default>80</default>
+			<advanced>true</advanced>
+		</parameter>
 	</config-description>
 
 	<config-description uri="thing-type:tplinksmarthome:device-switch">
@@ -62,6 +122,36 @@
 			<description>Refresh of device state in seconds.</description>
 			<unitLabel>seconds</unitLabel>
 			<default>1</default>
+		</parameter>
+		<parameter name="protocol" type="text">
+			<label>Local Protocol</label>
+			<description>Transport used by the device. AUTO probes legacy XOR first and then authenticated KLAP.</description>
+			<default>AUTO</default>
+			<options>
+				<option value="AUTO">Automatic</option>
+				<option value="XOR">Legacy XOR (TCP/9999)</option>
+				<option value="KLAP">KLAP (auto version)</option>
+				<option value="KLAP_V1">KLAP v1</option>
+				<option value="KLAP_V2">KLAP v2</option>
+			</options>
+			<limitToOptions>true</limitToOptions>
+		</parameter>
+		<parameter name="username" type="text">
+			<label>TP-Link Account</label>
+			<description>TP-Link/Kasa account e-mail. Required by devices that enforce authenticated local access.</description>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="password" type="text">
+			<context>password</context>
+			<label>TP-Link Password</label>
+			<description>Password for the TP-Link/Kasa account. It is used only for local device authentication.</description>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="httpPort" type="integer" min="1" max="65535">
+			<label>KLAP HTTP Port</label>
+			<description>HTTP port used by KLAP. Modern discovery normally supplies this automatically.</description>
+			<default>80</default>
+			<advanced>true</advanced>
 		</parameter>
 	</config-description>
 </config-description:config-descriptions>
