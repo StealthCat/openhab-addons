@@ -37,12 +37,6 @@ public abstract class SmartHomeDevice {
     protected @NonNullByDefault({}) Connection connection;
     protected @NonNullByDefault({}) TPLinkSmartHomeConfiguration configuration;
 
-    /**
-     * Checks if the response object contains errors and if so throws an {@link IOException} when an error code was set.
-     *
-     * @param response The response to check for errors.
-     * @throws IOException if an error code was set in the response object
-     */
     protected void checkErrors(@Nullable HasErrorResponse response) throws IOException {
         final ErrorResponse errorResponse = response == null ? null : response.getErrorResponse();
 
@@ -51,46 +45,18 @@ public abstract class SmartHomeDevice {
         }
     }
 
-    /**
-     * Sets connection and configuration values.
-     *
-     * @param connection The connection to the device
-     * @param configuration The global configuration
-     */
     public void initialize(Connection connection, TPLinkSmartHomeConfiguration configuration) {
+        connection.configure(configuration);
         this.connection = connection;
         this.configuration = configuration;
     }
 
-    /**
-     * @return the json string to send to the device to get the state of the device.
-     */
     public abstract String getUpdateCommand();
 
-    /**
-     * Handle the command for the given channel
-     *
-     * @param channelUID The channel the command is for
-     * @param command The command to be send to the device
-     * @return Returns true if the commands successfully was send to the device
-     * @throws IOException In case of communications error or the device returned an error
-     */
     public abstract boolean handleCommand(ChannelUID channelUID, Command command) throws IOException;
 
-    /**
-     * Returns the {@link State} value for the given value extracted from the deviceState data.
-     *
-     * @param channelUid channel to get state for
-     * @param deviceState state object containing the state
-     * @return {@link State} value for the given channel
-     */
     public abstract State updateChannel(ChannelUID channelUid, DeviceState deviceState);
 
-    /**
-     * Called with the new device state after the new device state is retrieved from the device.
-     *
-     * @param deviceState new device state
-     */
     public void refreshedDeviceState(@Nullable DeviceState deviceState) {
     }
 }
