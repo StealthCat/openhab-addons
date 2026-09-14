@@ -58,6 +58,7 @@ public class TPLinkSmartHomeDiscoveryService extends AbstractDiscoveryService im
     private final Logger logger = LoggerFactory.getLogger(TPLinkSmartHomeDiscoveryService.class);
     private final Commands commands = new Commands();
     private final Map<String, String> idInetAddressCache = new ConcurrentHashMap<>();
+    private final Map<String, String> macInetAddressCache = new ConcurrentHashMap<>();
     private final DatagramPacket legacyDiscoverPacket;
     private final DatagramPacket modernDiscoverPacket;
     private final DatagramPacket modernDiscoverPacketAlt;
@@ -97,6 +98,11 @@ public class TPLinkSmartHomeDiscoveryService extends AbstractDiscoveryService im
     }
 
     @Override
+    public @Nullable String getLastKnownIpAddressByMac(String macAddress) {
+        return macInetAddressCache.get(normalizeMac(macAddress));
+    }
+
+    @Override
     protected void startBackgroundDiscovery() {
         discoveryJob = scheduler.scheduleWithFixedDelay(this::startScan, 0, REFRESH_INTERVAL_MINUTES, TimeUnit.MINUTES);
     }
@@ -116,6 +122,7 @@ public class TPLinkSmartHomeDiscoveryService extends AbstractDiscoveryService im
         synchronized (this) {
             try {
                 idInetAddressCache.clear();
+                macInetAddressCache.clear();
                 discoverSocket = sendDiscoveryPacket();
                 while (true) {
                     if (discoverSocket == null) {
@@ -179,6 +186,7 @@ public class TPLinkSmartHomeDiscoveryService extends AbstractDiscoveryService im
         Sysinfo sysinfo = sysinfoRaw.getActualSysinfo();
         String deviceId = sysinfo.getDeviceId();
         idInetAddressCache.put(deviceId, ipAddress);
+        cacheMacAddress(sysinfo.getMac(), ipAddress);
         Optional<TPLinkSmartHomeThingType> thingType = getThingTypeUID(sysinfo.getModel());
         if (thingType.isPresent()) {
             ThingTypeUID thingTypeUID = thingType.get().thingTypeUID();
@@ -214,6 +222,7 @@ public class TPLinkSmartHomeDiscoveryService extends AbstractDiscoveryService im
         if (!result.deviceId().isBlank()) {
             idInetAddressCache.put(result.deviceId(), ipAddress);
         }
+        cacheMacAddress(result.mac(), ipAddress);
         ThingUID thingUID = new ThingUID(thingType.get().thingTypeUID(), uidSuffix(result, ipAddress));
         Map<String, Object> properties = new HashMap<>();
         properties.put(CONFIG_IP, ipAddress);
@@ -235,6 +244,16 @@ public class TPLinkSmartHomeDiscoveryService extends AbstractDiscoveryService im
         DiscoveryResult discoveryResult = DiscoveryResultBuilder.create(thingUID).withLabel(label)
                 .withRepresentationProperty(CONFIG_IP).withProperties(properties).build();
         thingDiscovered(discoveryResult);
+    }
+
+    private void cacheMacAddress(@Nullable String macAddress, String ipAddress) {
+        if (macAddress != null && !macAddress.isBlank()) {
+            macInetAddressCache.put(normalizeMac(macAddress), ipAddress);
+        }
+    }
+
+    private static String normalizeMac(String macAddress) {
+        return macAddress.replaceAll("[^A-Za-z0-9]", "").toLowerCase(Locale.ENGLISH);
     }
 
     private String uidSuffix(ModernDiscoveryResult result, String ipAddress) {
