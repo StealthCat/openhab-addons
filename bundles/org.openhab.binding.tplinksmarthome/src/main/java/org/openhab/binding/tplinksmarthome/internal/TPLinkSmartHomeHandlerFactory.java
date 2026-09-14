@@ -12,6 +12,7 @@
  */
 package org.openhab.binding.tplinksmarthome.internal;
 
+import static org.openhab.binding.tplinksmarthome.internal.TPLinkSmartHomeBindingConstants.THING_TYPE_ACCOUNT_BRIDGE;
 import static org.openhab.binding.tplinksmarthome.internal.TPLinkSmartHomeThingType.SUPPORTED_THING_TYPES;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -25,6 +26,8 @@ import org.openhab.binding.tplinksmarthome.internal.device.RangeExtenderDevice;
 import org.openhab.binding.tplinksmarthome.internal.device.SmartHomeDevice;
 import org.openhab.binding.tplinksmarthome.internal.device.SwitchDevice;
 import org.openhab.binding.tplinksmarthome.internal.handler.SmartHomeHandler;
+import org.openhab.binding.tplinksmarthome.internal.handler.TPLinkAccountBridgeHandler;
+import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
@@ -54,15 +57,18 @@ public class TPLinkSmartHomeHandlerFactory extends BaseThingHandlerFactory {
 
     @Override
     public boolean supportsThingType(final ThingTypeUID thingTypeUID) {
-        return SUPPORTED_THING_TYPES.contains(thingTypeUID);
+        return THING_TYPE_ACCOUNT_BRIDGE.equals(thingTypeUID) || SUPPORTED_THING_TYPES.contains(thingTypeUID);
     }
 
     @Nullable
     @Override
     protected ThingHandler createHandler(final Thing thing) {
         final ThingTypeUID thingTypeUID = thing.getThingTypeUID();
-        final TPLinkSmartHomeThingType type = TPLinkSmartHomeThingType.THING_TYPE_MAP.get(thingTypeUID);
+        if (THING_TYPE_ACCOUNT_BRIDGE.equals(thingTypeUID)) {
+            return thing instanceof Bridge bridge ? new TPLinkAccountBridgeHandler(bridge) : null;
+        }
 
+        final TPLinkSmartHomeThingType type = TPLinkSmartHomeThingType.THING_TYPE_MAP.get(thingTypeUID);
         if (type == null) {
             return null;
         }
