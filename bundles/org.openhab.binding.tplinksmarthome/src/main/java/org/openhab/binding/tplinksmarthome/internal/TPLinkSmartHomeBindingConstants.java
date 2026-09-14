@@ -51,14 +51,23 @@ public final class TPLinkSmartHomeBindingConstants {
     }
 
     public static final String BINDING_ID = "tplinksmarthome";
+
+    // List of all switch channel ids
     public static final String CHANNEL_SWITCH = "switch";
+
+    // List of all plug channel ids
     public static final String CHANNEL_LED = "led";
+
+    // List of all bulb channel ids
     public static final String CHANNEL_BRIGHTNESS = "brightness";
     public static final String CHANNEL_COLOR = "color";
     public static final String CHANNEL_COLOR_TEMPERATURE = "colorTemperature";
     public static final String CHANNEL_COLOR_TEMPERATURE_ABS = "colorTemperatureAbs";
+
     public static final Set<String> CHANNELS_BULB_SWITCH = Stream.of(CHANNEL_BRIGHTNESS, CHANNEL_COLOR,
             CHANNEL_COLOR_TEMPERATURE, CHANNEL_COLOR_TEMPERATURE_ABS, CHANNEL_SWITCH).collect(Collectors.toSet());
+
+    // List of all energy channel ids
     public static final String CHANNEL_ENERGY_POWER = "power";
     public static final String CHANNEL_ENERGY_TOTAL = "energyUsage";
     public static final String CHANNEL_ENERGY_VOLTAGE = "voltage";
@@ -66,19 +75,26 @@ public final class TPLinkSmartHomeBindingConstants {
     public static final Set<String> CHANNELS_ENERGY = Stream
             .of(CHANNEL_ENERGY_POWER, CHANNEL_ENERGY_TOTAL, CHANNEL_ENERGY_VOLTAGE, CHANNEL_ENERGY_CURRENT)
             .collect(Collectors.toSet());
+
+    // List of all misc channel ids
     public static final String CHANNEL_RSSI = "rssi";
+
+    // List of all group channel ids
     public static final String CHANNEL_SWITCH_GROUP = "group";
     public static final String CHANNEL_OUTLET_GROUP_PREFIX = "outlet";
 
+    // List of configuration keys
     public static final String CONFIG_IP = "ipAddress";
     public static final String CONFIG_DEVICE_ID = "deviceId";
     public static final String CONFIG_REFRESH = "refresh";
-    public static final String CONFIG_TRANSITION_PERIOD = "transitionPeriod";
     public static final String CONFIG_PROTOCOL = "protocol";
     public static final String CONFIG_USERNAME = "username";
     public static final String CONFIG_PASSWORD = "password";
     public static final String CONFIG_HTTP_PORT = "httpPort";
+    // Only for bulbs
+    public static final String CONFIG_TRANSITION_PERIOD = "transitionPeriod";
 
+    // List of property keys
     public static final String PROPERTY_TYPE = "type";
     public static final String PROPERTY_MODEL = "model";
     public static final String PROPERTY_DEVICE_NAME = "device name";

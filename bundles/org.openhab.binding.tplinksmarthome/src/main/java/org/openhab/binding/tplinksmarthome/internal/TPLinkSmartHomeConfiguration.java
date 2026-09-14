@@ -12,22 +12,50 @@
  */
 package org.openhab.binding.tplinksmarthome.internal;
 
-/** Data class representing user configurable settings of the device. */
+/**
+ * Data class representing the user configurable settings of the device
+ *
+ * @author Hilbrand Bouwkamp - Initial contribution
+ */
 public class TPLinkSmartHomeConfiguration {
+
+    /**
+     * IP Address of the device.
+     */
     public String ipAddress;
+
+    /**
+     * The id of the device;
+     */
     public String deviceId;
+
+    /**
+     * Refresh rate for the device in seconds.
+     */
     public int refresh;
+
+    /**
+     * Transition period of light bulb state changes in seconds.
+     */
     public int transitionPeriod;
 
-    /** AUTO, XOR, KLAP, KLAP_V1 or KLAP_V2. */
+    /**
+     * Local protocol. Supported values are AUTO, XOR, KLAP, KLAP_V1 and KLAP_V2.
+     */
     public String protocol = "AUTO";
 
-    /** TP-Link cloud account e-mail used by authenticated local firmware. */
+    /**
+     * TP-Link/Kasa account e-mail used for authenticated local access.
+     */
     public String username = "";
 
-    /** TP-Link cloud account password used only for local KLAP authentication. */
+    /**
+     * TP-Link/Kasa account password used for authenticated local access.
+     */
     public String password = "";
 
-    /** HTTP port advertised by modern TP-Link discovery, normally 80. */
+    /**
+     * HTTP port used by KLAP, normally 80.
+     */
     public int httpPort = 80;
 }
