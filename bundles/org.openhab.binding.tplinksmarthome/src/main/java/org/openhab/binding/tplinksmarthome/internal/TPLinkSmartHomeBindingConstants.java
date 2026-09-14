@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.openhab.core.thing.ThingTypeUID;
 
 /**
  * This class defines common constants, which are used across the whole binding.
@@ -51,6 +52,7 @@ public final class TPLinkSmartHomeBindingConstants {
     }
 
     public static final String BINDING_ID = "tplinksmarthome";
+    public static final ThingTypeUID THING_TYPE_ACCOUNT_BRIDGE = new ThingTypeUID(BINDING_ID, "account");
 
     // List of all switch channel ids
     public static final String CHANNEL_SWITCH = "switch";
