@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config-description:config-descriptions
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:config-description="https://openhab.org/schemas/config-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/config-description/v1.0.0 https://openhab.org/schemas/config-description-1.0.0.xsd">
+
+	<config-description uri="bridge-type:tplinksmarthome:account">
+		<parameter name="username" type="text" required="true">
+			<context>email</context>
+			<label>TP-Link Account</label>
+			<description>TP-Link/Kasa account e-mail. Child Things assigned to this bridge use these credentials for local KLAP authentication.</description>
+		</parameter>
+		<parameter name="password" type="text" required="true">
+			<context>password</context>
+			<label>TP-Link Password</label>
+			<description>TP-Link/Kasa account password. The password is also used locally by child Things for KLAP authentication.</description>
+		</parameter>
+		<parameter name="cloudUrl" type="text" required="false">
+			<label>Cloud Login URL</label>
+			<description>TP-Link cloud endpoint used only to validate/maintain the account session. Local device control does not depend on it.</description>
+			<default>https://eu-wap.tplinkcloud.com</default>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="reconnectInterval" type="integer" min="0" max="1440" required="false">
+			<label>Cloud Reconnect Interval</label>
+			<description>Minutes between cloud login validation attempts. Set to 0 to validate only when the bridge starts.</description>
+			<unitLabel>minutes</unitLabel>
+			<default>60</default>
+			<advanced>true</advanced>
+		</parameter>
+	</config-description>
+</config-description:config-descriptions>
