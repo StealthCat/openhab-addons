@@ -21,6 +21,9 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Apply openHAB formatting
+        run: mvn -B -pl :org.openhab.binding.tplinksmarthome -am spotless:apply
+
       - name: Build TP-Link Smart Home binding
         run: mvn -B -pl :org.openhab.binding.tplinksmarthome -am clean verify
 
