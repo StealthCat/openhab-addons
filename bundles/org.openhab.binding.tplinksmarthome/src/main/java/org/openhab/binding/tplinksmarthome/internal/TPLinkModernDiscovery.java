@@ -22,8 +22,10 @@ import java.util.Optional;
 import java.util.zip.CRC32;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -81,11 +83,12 @@ final class TPLinkModernDiscovery {
         try {
             JsonObject root = JsonParser.parseString(new String(data, 16, length - 16, StandardCharsets.UTF_8))
                     .getAsJsonObject();
-            JsonObject result = root.getAsJsonObject("result");
+            JsonObject result = object(result(root, "result"));
             if (result == null) {
                 return Optional.empty();
             }
-            JsonObject scheme = result.getAsJsonObject("mgt_encrypt_schm");
+            JsonObject scheme = object(result(result, "mgt_encrypt_schm"));
+            JsonObject encryptInfo = object(result(result, "encrypt_info"));
             String deviceType = string(result, "device_type");
             String model = string(result, "device_model");
             String deviceId = string(result, "device_id");
@@ -93,8 +96,14 @@ final class TPLinkModernDiscovery {
             String mac = string(result, "mac");
             String hardwareVersion = string(result, "hw_ver");
             String encryptType = scheme == null ? "" : string(scheme, "encrypt_type");
+            if (encryptType.isBlank() && encryptInfo != null) {
+                encryptType = string(encryptInfo, "sym_schm");
+            }
             int httpPort = scheme == null ? 80 : integer(scheme, "http_port", 80);
             int loginVersion = scheme == null ? 0 : integer(scheme, "lv", 0);
+            if (loginVersion == 0) {
+                loginVersion = maxEncryptionVersion(result(result, "encrypt_type"));
+            }
             boolean https = scheme != null && bool(scheme, "is_support_https", false);
             return Optional.of(new ModernDiscoveryResult(deviceType, model, deviceId, deviceName, mac, hardwareVersion,
                     encryptType, httpPort, loginVersion, https));
@@ -103,13 +112,23 @@ final class TPLinkModernDiscovery {
         }
     }
 
+    private static @Nullable JsonElement result(JsonObject object, String name) {
+        return object.has(name) && !object.get(name).isJsonNull() ? object.get(name) : null;
+    }
+
+    private static @Nullable JsonObject object(@Nullable JsonElement element) {
+        return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
+    }
+
     private static String string(JsonObject object, String name) {
-        return object.has(name) && !object.get(name).isJsonNull() ? object.get(name).getAsString() : "";
+        JsonElement element = result(object, name);
+        return element != null && element.isJsonPrimitive() ? element.getAsString() : "";
     }
 
     private static int integer(JsonObject object, String name, int fallback) {
         try {
-            return object.has(name) ? object.get(name).getAsInt() : fallback;
+            JsonElement element = result(object, name);
+            return element == null ? fallback : element.getAsInt();
         } catch (RuntimeException e) {
             return fallback;
         }
@@ -117,10 +136,30 @@ final class TPLinkModernDiscovery {
 
     private static boolean bool(JsonObject object, String name, boolean fallback) {
         try {
-            return object.has(name) ? object.get(name).getAsBoolean() : fallback;
+            JsonElement element = result(object, name);
+            return element == null ? fallback : element.getAsBoolean();
         } catch (RuntimeException e) {
             return fallback;
         }
+    }
+
+    private static int maxEncryptionVersion(@Nullable JsonElement element) {
+        if (element == null) {
+            return 0;
+        }
+        int maximum = 0;
+        try {
+            if (element.isJsonArray()) {
+                for (JsonElement value : element.getAsJsonArray()) {
+                    maximum = Math.max(maximum, Integer.parseInt(value.getAsString()));
+                }
+            } else if (element.isJsonPrimitive()) {
+                maximum = Integer.parseInt(element.getAsString());
+            }
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+        return maximum;
     }
 
     record ModernDiscoveryResult(String deviceType, String model, String deviceId, String deviceName, String mac,
