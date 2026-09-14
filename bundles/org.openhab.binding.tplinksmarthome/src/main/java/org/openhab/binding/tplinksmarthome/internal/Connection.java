@@ -62,16 +62,24 @@ public class Connection {
 
     /** Apply protocol/authentication settings after the device has been initialized. */
     public synchronized void configure(final TPLinkSmartHomeConfiguration configuration) {
+        configure(configuration, configuration.username, configuration.password);
+    }
+
+    /**
+     * Apply protocol settings while allowing credentials to be supplied by an account bridge.
+     */
+    public synchronized void configure(final TPLinkSmartHomeConfiguration configuration, @Nullable String username,
+            @Nullable String password) {
         String newProtocol = normalizeProtocol(configuration.protocol);
-        String newUsername = configuration.username == null ? "" : configuration.username;
-        String newPassword = configuration.password == null ? "" : configuration.password;
+        String newUsername = username == null ? "" : username;
+        String newPassword = password == null ? "" : password;
         int newHttpPort = configuration.httpPort > 0 ? configuration.httpPort : 80;
 
-        if (!newProtocol.equals(configuredProtocol) || !newUsername.equals(username) || !newPassword.equals(password)
-                || newHttpPort != httpPort) {
+        if (!newProtocol.equals(configuredProtocol) || !newUsername.equals(this.username)
+                || !newPassword.equals(this.password) || newHttpPort != httpPort) {
             configuredProtocol = newProtocol;
-            username = newUsername;
-            password = newPassword;
+            this.username = newUsername;
+            this.password = newPassword;
             httpPort = newHttpPort;
             activeTransport = ActiveTransport.UNKNOWN;
             klapTransport = null;
