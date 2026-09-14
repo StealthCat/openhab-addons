@@ -1,0 +1,37 @@
+name: TP-Link Smart Home build
+
+on:
+  push:
+    branches:
+      - tplink-modern-protocols-build
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build TP-Link Smart Home binding
+        run: mvn -B -pl :org.openhab.binding.tplinksmarthome -am clean verify
+
+      - name: Upload binding JAR
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: org.openhab.binding.tplinksmarthome
+          path: |
+            bundles/org.openhab.binding.tplinksmarthome/target/org.openhab.binding.tplinksmarthome-*.jar
+            !bundles/org.openhab.binding.tplinksmarthome/target/*-sources.jar
+            !bundles/org.openhab.binding.tplinksmarthome/target/*-javadoc.jar
+          if-no-files-found: error
+          retention-days: 7
