@@ -1,0 +1,51 @@
+name: TP-Link Smart Home Account Bridge M1 build
+
+on:
+  push:
+    branches:
+      - tplink-modern-protocols-5.3.0.M1-account-build
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout add-ons
+        uses: actions/checkout@v7
+
+      - name: Checkout openHAB Core 5.3.0.M1
+        uses: actions/checkout@v7
+        with:
+          repository: openhab/openhab-core
+          ref: 5.3.0.M1
+          path: openhab-core
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install openHAB Core 5.3.0.M1
+        working-directory: openhab-core
+        run: mvn -B -DskipTests -Dspotless.check.skip=true install
+
+      - name: Apply openHAB formatting
+        run: mvn -B -pl :org.openhab.binding.tplinksmarthome -am spotless:apply
+
+      - name: Build TP-Link Smart Home binding
+        run: mvn -B -pl :org.openhab.binding.tplinksmarthome -am clean verify
+
+      - name: Upload binding JAR
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: org.openhab.binding.tplinksmarthome-5.3.0.M1-account-bridge
+          path: |
+            bundles/org.openhab.binding.tplinksmarthome/target/org.openhab.binding.tplinksmarthome-*.jar
+            !bundles/org.openhab.binding.tplinksmarthome/target/*-sources.jar
+            !bundles/org.openhab.binding.tplinksmarthome/target/*-javadoc.jar
+          if-no-files-found: error
+          retention-days: 7
