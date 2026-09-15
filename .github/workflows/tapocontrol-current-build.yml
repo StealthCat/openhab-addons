@@ -1,0 +1,66 @@
+name: TapoControl current-source release build
+
+on:
+  push:
+    branches:
+      - 'build/tapocontrol-current-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build TapoControl JAR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build TapoControl
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./mvnw -B -ntp clean install \
+            -pl :org.openhab.binding.tapocontrol \
+            -DskipChecks \
+            -DskipTests \
+            -Dfeatures.verify.skip=true \
+            -Dmarkdownlint.skip=true \
+            -Dspotless.check.skip=true
+
+      - name: Prepare release bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p release
+          cp bundles/org.openhab.binding.tapocontrol/target/org.openhab.binding.tapocontrol-*.jar release/
+          cp bundles/org.openhab.binding.tapocontrol/pom.xml release/
+          cp bundles/org.openhab.binding.tapocontrol/README.md release/
+          {
+            echo "Repository: https://github.com/openhab/openhab-addons"
+            echo "Source commit: ${{ github.event.before }}"
+            echo "Build commit: ${{ github.sha }}"
+            echo "Binding: org.openhab.binding.tapocontrol"
+            echo "Java: 21"
+            echo "Built UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } > release/BUILD_INFO.txt
+          sha256sum release/*.jar > release/SHA256SUMS.txt
+          ls -lah release
+
+      - name: Upload compiled release
+        uses: actions/upload-artifact@v7
+        with:
+          name: tapocontrol-current-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
